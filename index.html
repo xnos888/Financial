@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compound Interest Comparison — เปรียบเทียบแผนการลงทุน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { font-family: 'Inter', 'Noto Sans Thai', sans-serif; }
+    html, body { height: 100%; overflow: hidden; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    .num-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .left-panel::-webkit-scrollbar { width: 4px; }
+    .left-panel::-webkit-scrollbar-track { background: transparent; }
+    .left-panel::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+    .left-panel::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+    .toast { animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards; }
+    @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes toastOut { from { opacity:1; } to { opacity:0; } }
+  </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col">
+
+  <!-- ===== TOP BAR ===== -->
+  <div class="flex-shrink-0 bg-white border-b border-gray-200 px-5 py-3">
+    <div class="max-w-[1600px] mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <h1 class="text-lg font-bold text-gray-900">Compound Interest Comparison</h1>
+        <span class="text-gray-300 hidden sm:inline">|</span>
+        <span class="text-sm text-gray-400 hidden sm:inline">เปรียบเทียบแผนการลงทุน</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-500">เกษียณ</span>
+          <div class="relative w-22">
+            <input id="retirementAge" type="number" value="60" min="30" max="80"
+              class="num-input w-full rounded-md border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 outline-none transition-all" />
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">ปี</span>
+          </div>
+        </div>
+        <button onclick="copyShareLink()"
+          class="flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-sm font-medium transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          Copy Link
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN CONTENT (fills remaining height) ===== -->
+  <div class="flex-1 flex overflow-hidden max-w-[1600px] mx-auto w-full">
+
+    <!-- LEFT PANEL: Scenario Inputs (scrollable) -->
+    <div class="left-panel w-96 flex-shrink-0 border-r border-gray-200 bg-white overflow-y-auto p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 id="scenarioCount" class="text-sm font-semibold text-gray-600">Scenarios (3/5)</h2>
+        <button id="addBtn" onclick="addScenario()"
+          class="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">+ เพิ่ม</button>
+      </div>
+      <div id="scenarioGrid" class="space-y-3"></div>
+    </div>
+
+    <!-- RIGHT PANEL: Chart + Summary -->
+    <div class="flex-1 flex flex-col overflow-hidden p-4 gap-3">
+
+      <!-- CHART (fills all remaining space) -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 min-h-0 flex flex-col flex-1">
+        <h2 class="text-sm font-semibold text-gray-700 mb-2">กราฟเปรียบเทียบมูลค่าเงินลงทุน</h2>
+        <div class="flex-1 relative min-h-0">
+          <canvas id="mainChart"></canvas>
+        </div>
+      </div>
+
+      <!-- SUMMARY (gets more space now) -->
+      <div class="flex-shrink-0">
+        <h2 id="summaryTitle" class="text-sm font-semibold text-gray-700 mb-2">สรุปมูลค่าตอนอายุ 60 ปี</h2>
+        <div id="summaryGrid" class="grid grid-cols-3 gap-3"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="toast bg-gray-800 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">Link copied!</div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    //  STATE
+    // ─────────────────────────────────────────────
+    const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+    const MAX = 5;
+
+    let scenarios = [
+      { name: 'เงินฝากออมทรัพย์', initial: 0, monthly: 10000, rate: 1.5, years: 20, age: 30 },
+      { name: 'กองทุนรวม', initial: 0, monthly: 10000, rate: 5, years: 20, age: 30 },
+      { name: 'หุ้น/ETF', initial: 0, monthly: 10000, rate: 8, years: 20, age: 30 },
+    ];
+
+    let chart = null;
+
+    // ─────────────────────────────────────────────
+    //  CALCULATION
+    // ─────────────────────────────────────────────
+    function calculate(s) {
+      const monthlyRate = s.rate / 100 / 12;
+      const totalMonths = s.years * 12;
+      const points = [];
+      let value = s.initial;
+      let contributed = s.initial;
+
+      points.push({ age: s.age, value: Math.round(value), contributed: Math.round(contributed), interest: 0 });
+
+      for (let m = 1; m <= totalMonths; m++) {
+        value = monthlyRate > 0 ? value * (1 + monthlyRate) + s.monthly : value + s.monthly;
+        contributed += s.monthly;
+        if (m % 12 === 0) {
+          points.push({
+            age: s.age + m / 12,
+            value: Math.round(value),
+            contributed: Math.round(contributed),
+            interest: Math.round(value - contributed),
+          });
+        }
+      }
+      return points;
+    }
+
+    function getAtAge(points, targetAge) {
+      const exact = points.find(p => p.age === targetAge);
+      if (exact) return exact;
+      const before = points.filter(p => p.age <= targetAge).pop();
+      const after = points.find(p => p.age > targetAge);
+      if (!before && !after) return null;
+      if (!before) return after;
+      if (!after) return before;
+      const r = (targetAge - before.age) / (after.age - before.age);
+      return {
+        age: targetAge,
+        value: Math.round(before.value + (after.value - before.value) * r),
+        contributed: Math.round(before.contributed + (after.contributed - before.contributed) * r),
+        interest: Math.round(before.interest + (after.interest - before.interest) * r),
+      };
+    }
+
+    // ─────────────────────────────────────────────
+    //  FORMATTING
+    // ─────────────────────────────────────────────
+    function fmt(v) {
+      if (v == null || isNaN(v)) return '฿0';
+      return '฿' + Math.round(v).toLocaleString('en-US');
+    }
+
+    function fmtAxis(v) {
+      if (v === 0) return '฿0';
+      if (Math.abs(v) >= 1e9) return '฿' + (v / 1e9).toFixed(1) + 'B';
+      if (Math.abs(v) >= 1e6) return '฿' + (v / 1e6).toFixed(1) + 'M';
+      if (Math.abs(v) >= 1e3) return '฿' + (v / 1e3).toFixed(0) + 'K';
+      return '฿' + v;
+    }
+
+    function fmtInput(v) {
+      if (v == null || v === '') return '';
+      return Number(v).toLocaleString('en-US');
+    }
+
+    function fmtCompact(v) {
+      if (v == null || isNaN(v)) return '฿0';
+      if (Math.abs(v) >= 1e6) return '฿' + (v / 1e6).toFixed(2) + 'M';
+      return '฿' + Math.round(v).toLocaleString('en-US');
+    }
+
+    // ─────────────────────────────────────────────
+    //  SCENARIO CARD RENDER (compact)
+    // ─────────────────────────────────────────────
+    function renderScenarios() {
+      const grid = document.getElementById('scenarioGrid');
+      grid.innerHTML = '';
+
+      scenarios.forEach((s, i) => {
+        const color = COLORS[i];
+        const canRemove = scenarios.length > 1;
+
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg border border-gray-100 p-3.5 relative';
+        card.style.borderLeft = '3px solid ' + color;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-2.5">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${color}"></div>
+              <input type="text" value="${escHtml(s.name)}" placeholder="Scenario ${i+1}" maxlength="30"
+                class="text-sm font-semibold text-gray-800 bg-transparent border-none outline-none w-full placeholder:text-gray-400"
+                data-idx="${i}" data-field="name" onchange="updateField(this)" />
+            </div>
+            ${canRemove ? `<button onclick="removeScenario(${i})" class="text-gray-300 hover:text-red-400 transition-colors ml-1 text-base leading-none" title="ลบ">&times;</button>` : ''}
+          </div>
+          <div class="grid grid-cols-2 gap-x-3 gap-y-2">
+            ${fieldCompact('เริ่มต้น', i, 'initial', s.initial, '฿', '', 0, 999999999)}
+            ${fieldCompact('ต่อเดือน', i, 'monthly', s.monthly, '฿', '', 0, 9999999)}
+            ${fieldCompact('ผลตอบแทน/ปี', i, 'rate', s.rate, '', '%', 0, 30)}
+            ${fieldCompact('ระยะเวลา', i, 'years', s.years, '', 'ปี', 1, 50)}
+            ${fieldCompact('อายุปัจจุบัน', i, 'age', s.age, '', 'ปี', 15, 80)}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('scenarioCount').textContent = `Scenarios (${scenarios.length}/${MAX})`;
+      document.getElementById('addBtn').style.display = scenarios.length >= MAX ? 'none' : '';
+    }
+
+    function fieldCompact(label, idx, key, val, prefix, suffix, min, max) {
+      const displayVal = (key === 'rate') ? val : fmtInput(val);
+      return `
+        <div>
+          <label class="block text-xs text-gray-400 mb-0.5">${label}</label>
+          <div class="relative">
+            ${prefix ? `<span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">${prefix}</span>` : ''}
+            <input type="text" inputmode="decimal" value="${displayVal}"
+              data-idx="${idx}" data-field="${key}" data-min="${min}" data-max="${max}"
+              onfocus="onFieldFocus(this)" onblur="onFieldBlur(this)" oninput="onFieldInput(this)"
+              class="num-input w-full rounded border border-gray-200 bg-white py-1.5 text-sm text-gray-900 outline-none transition-all ${prefix ? 'pl-6 pr-2' : 'pl-2.5'} ${suffix ? 'pr-7' : 'pr-2.5'}" />
+            ${suffix ? `<span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">${suffix}</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ─────────────────────────────────────────────
+    //  INPUT HANDLERS
+    // ─────────────────────────────────────────────
+    function updateField(el) {
+      const i = +el.dataset.idx;
+      const f = el.dataset.field;
+      if (f === 'name') { scenarios[i].name = el.value; }
+      refresh();
+    }
+
+    function onFieldFocus(el) {
+      const i = +el.dataset.idx;
+      const f = el.dataset.field;
+      const raw = scenarios[i][f];
+      el.value = raw !== 0 ? String(raw) : '';
+      setTimeout(() => el.select(), 0);
+    }
+
+    function onFieldBlur(el) {
+      const i = +el.dataset.idx;
+      const f = el.dataset.field;
+      const val = scenarios[i][f];
+      el.value = (f === 'rate') ? val : fmtInput(val);
+    }
+
+    function onFieldInput(el) {
+      const i = +el.dataset.idx;
+      const f = el.dataset.field;
+      const min = +el.dataset.min;
+      const max = +el.dataset.max;
+      const raw = el.value.replace(/,/g, '');
+      if (raw === '' || raw === '-') { scenarios[i][f] = 0; refresh(); return; }
+      const num = parseFloat(raw);
+      if (!isNaN(num)) {
+        scenarios[i][f] = Math.min(Math.max(num, min), max);
+        if (f === 'years' || f === 'age') scenarios[i][f] = Math.round(scenarios[i][f]);
+        refresh();
+      }
+    }
+
+    function getRetirementAge() {
+      return +(document.getElementById('retirementAge').value) || 60;
+    }
+
+    // ─────────────────────────────────────────────
+    //  ADD / REMOVE
+    // ─────────────────────────────────────────────
+    function addScenario() {
+      if (scenarios.length >= MAX) return;
+      scenarios.push({ name: '', initial: 0, monthly: 10000, rate: 5, years: 20, age: 30 });
+      renderScenarios();
+      refresh();
+    }
+
+    function removeScenario(idx) {
+      if (scenarios.length <= 1) return;
+      scenarios.splice(idx, 1);
+      renderScenarios();
+      refresh();
+    }
+
+    // ─────────────────────────────────────────────
+    //  CHART
+    // ─────────────────────────────────────────────
+    function refreshChart() {
+      const retAge = getRetirementAge();
+      const allData = scenarios.map(s => calculate(s));
+
+      let minAge = Infinity, maxAge = -Infinity;
+      scenarios.forEach(s => {
+        minAge = Math.min(minAge, s.age);
+        maxAge = Math.max(maxAge, s.age + s.years);
+      });
+
+      const ageSet = new Set();
+      allData.forEach(dp => dp.forEach(p => ageSet.add(p.age)));
+      const ages = [...ageSet].sort((a, b) => a - b);
+
+      const datasets = scenarios.map((s, i) => {
+        const dp = allData[i];
+        return {
+          label: s.name || ('Scenario ' + (i + 1)),
+          data: ages.map(age => {
+            const p = dp.find(pt => pt.age === age);
+            return (p && age >= s.age && age <= s.age + s.years) ? p.value : null;
+          }),
+          borderColor: COLORS[i],
+          backgroundColor: COLORS[i] + '18',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: COLORS[i],
+          tension: 0.3,
+          spanGaps: false,
+        };
+      });
+
+      const annotations = {};
+      if (retAge >= minAge && retAge <= maxAge) {
+        annotations.retirementLine = {
+          type: 'line',
+          xMin: retAge, xMax: retAge,
+          borderColor: '#6B7280', borderWidth: 1.5, borderDash: [6, 4],
+          label: {
+            display: true, content: 'เกษียณ (' + retAge + ')',
+            position: 'start', backgroundColor: 'rgba(107,114,128,0.1)',
+            color: '#6B7280', font: { size: 12 }, padding: 4,
+          }
+        };
+      }
+
+      if (chart) chart.destroy();
+
+      const ctx = document.getElementById('mainChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: ages, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { usePointStyle: true, padding: 14, font: { size: 13 } }
+            },
+            tooltip: {
+              backgroundColor: 'white', titleColor: '#374151', bodyColor: '#6B7280',
+              borderColor: '#E5E7EB', borderWidth: 1, padding: 12, boxPadding: 4,
+              titleFont: { size: 13 }, bodyFont: { size: 12 },
+              usePointStyle: true,
+              callbacks: {
+                title: (items) => 'อายุ ' + items[0].label + ' ปี',
+                label: (ctx) => ctx.raw == null ? null : ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw)
+              }
+            },
+            annotation: { annotations }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'อายุ (ปี)', color: '#9CA3AF', font: { size: 12 } },
+              grid: { color: '#F3F4F6' },
+              ticks: { color: '#6B7280', font: { size: 12 } },
+            },
+            y: {
+              grid: { color: '#F3F4F6' },
+              ticks: { color: '#6B7280', font: { size: 12 }, callback: fmtAxis },
+              beginAtZero: true,
+            }
+          }
+        }
+      });
+
+      return allData;
+    }
+
+    // ─────────────────────────────────────────────
+    //  SUMMARY CARDS (compact inline)
+    // ─────────────────────────────────────────────
+    function renderSummary(allData) {
+      const retAge = getRetirementAge();
+      const grid = document.getElementById('summaryGrid');
+      grid.innerHTML = '';
+      document.getElementById('summaryTitle').textContent = 'สรุปมูลค่าตอนอายุ ' + retAge + ' ปี';
+
+      // Adjust grid columns based on scenario count
+      grid.className = 'grid gap-2';
+      grid.style.gridTemplateColumns = 'repeat(' + Math.min(scenarios.length, 5) + ', minmax(0, 1fr))';
+
+      scenarios.forEach((s, i) => {
+        const dp = allData[i];
+        const endAge = s.age + s.years;
+        const showRet = retAge >= s.age && retAge <= endAge;
+        const data = showRet ? getAtAge(dp, retAge) : dp[dp.length - 1];
+        const displayAge = showRet ? retAge : endAge;
+        if (!data) return;
+
+        const color = COLORS[i];
+        const returnPct = data.contributed > 0 ? ((data.interest / data.contributed) * 100).toFixed(1) : '0.0';
+        const principalPct = data.value > 0 ? (data.contributed / data.value * 100) : 0;
+        const interestPct = data.value > 0 ? (data.interest / data.value * 100) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg border border-gray-200 p-3 relative overflow-hidden';
+        card.style.borderTop = '2px solid ' + color;
+
+        card.innerHTML = `
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <div class="w-2 h-2 rounded-full" style="background:${color}"></div>
+            <span class="text-xs font-semibold text-gray-600 truncate">${escHtml(s.name || ('Scenario ' + (i+1)))}</span>
+          </div>
+          <p class="text-base font-bold mb-1.5" style="color:${color}">${fmtCompact(data.value)}</p>
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">เงินต้น</span>
+              <span class="text-gray-600">${fmtCompact(data.contributed)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">ดอกเบี้ย</span>
+              <span style="color:#10B981">${fmtCompact(data.interest)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">ผลตอบแทน</span>
+              <span style="color:${color}">${returnPct}%</span>
+            </div>
+          </div>
+          ${data.value > 0 ? `
+          <div class="mt-2 w-full h-2 bg-gray-100 rounded-full overflow-hidden flex">
+            <div class="h-full" style="width:${principalPct}%;background:#94A3B8;border-radius:${interestPct > 0 ? '9999px 0 0 9999px' : '9999px'}"></div>
+            <div class="h-full" style="width:${interestPct}%;background:${color};border-radius:${principalPct > 0 ? '0 9999px 9999px 0' : '9999px'}"></div>
+          </div>` : ''}
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // ─────────────────────────────────────────────
+    //  URL STATE (Share Link)
+    // ─────────────────────────────────────────────
+    function stateToHash() {
+      const retAge = getRetirementAge();
+      const sParts = scenarios.map(s =>
+        [s.name, s.initial, s.monthly, s.rate, s.years, s.age].join(',')
+      ).join('|');
+      return '#r=' + retAge + '&s=' + encodeURIComponent(sParts);
+    }
+
+    function loadFromHash() {
+      const hash = window.location.hash;
+      if (!hash || hash.length < 4) return false;
+      try {
+        const params = new URLSearchParams(hash.substring(1));
+        const r = parseInt(params.get('r'));
+        const sRaw = params.get('s');
+        if (!sRaw) return false;
+        const decoded = decodeURIComponent(sRaw);
+        const parts = decoded.split('|');
+        const loaded = [];
+        for (const part of parts) {
+          const fields = part.split(',');
+          if (fields.length < 6) continue;
+          loaded.push({
+            name: fields[0], initial: +fields[1] || 0, monthly: +fields[2] || 0,
+            rate: +fields[3] || 0, years: Math.round(+fields[4]) || 20, age: Math.round(+fields[5]) || 30,
+          });
+        }
+        if (loaded.length === 0 || loaded.length > MAX) return false;
+        scenarios = loaded;
+        if (r >= 30 && r <= 80) document.getElementById('retirementAge').value = r;
+        return true;
+      } catch (e) { console.warn('Failed to parse URL hash:', e); return false; }
+    }
+
+    function updateHash() {
+      const newHash = stateToHash();
+      if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
+    }
+
+    function copyShareLink() {
+      updateHash();
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => showToast('Link copied!')).catch(() => {
+        const ta = document.createElement('textarea'); ta.value = url;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); showToast('Link copied!');
+      });
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.querySelector('div').textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 2000);
+    }
+
+    // ─────────────────────────────────────────────
+    //  REFRESH ALL
+    // ─────────────────────────────────────────────
+    function refresh() {
+      const allData = refreshChart();
+      renderSummary(allData);
+      updateHash();
+    }
+
+    // ─────────────────────────────────────────────
+    //  INIT
+    // ─────────────────────────────────────────────
+    const loadedFromUrl = loadFromHash();
+
+    document.getElementById('retirementAge').addEventListener('input', function() {
+      let v = Math.round(+this.value);
+      if (v < 30) v = 30;
+      if (v > 80) v = 80;
+      refresh();
+    });
+
+    window.addEventListener('hashchange', function() {
+      if (loadFromHash()) { renderScenarios(); refresh(); }
+    });
+
+    renderScenarios();
+    refresh();
+
+    console.log('✅ Compound Interest Comparison loaded successfully');
+  </script>
+</body>
+</html>
